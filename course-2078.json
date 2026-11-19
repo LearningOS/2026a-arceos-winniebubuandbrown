@@ -2,8 +2,8 @@
   "schema": 1,
   "courseId": 2078,
   "repository": "LearningOS/2026a-arceos-winniebubuandbrown",
-  "commit": "5c3bcf26591347ccbf2713dbd912a717ceb39b6d",
-  "score": 200,
+  "commit": "2637363bc5d7e92b30d61043238f6c01b67b3045",
+  "score": 300,
   "totalScore": 600,
   "exercises": [
     {
@@ -23,8 +23,8 @@
     {
       "name": "alt_alloc",
       "max": 100,
-      "score": 0,
-      "status": "fail",
+      "score": 100,
+      "status": "pass",
       "exitCode": 0
     },
     {
@@ -50,9 +50,9 @@
     }
   ],
   "student": "winniebubuandbrown",
-  "runId": "44528243970",
+  "runId": "44533450281",
   "runAttempt": "1",
   "upload": {
-    "status": "accepted"
+    "status": "pending"
   }
 }
