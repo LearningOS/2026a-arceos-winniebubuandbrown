@@ -2,8 +2,8 @@
   "schema": 1,
   "courseId": 2078,
   "repository": "LearningOS/2026a-arceos-winniebubuandbrown",
-  "commit": "2637363bc5d7e92b30d61043238f6c01b67b3045",
-  "score": 300,
+  "commit": "7510523c85fd2ea482bfa6afc62629a9f71bc4d2",
+  "score": 400,
   "totalScore": 600,
   "exercises": [
     {
@@ -30,9 +30,9 @@
     {
       "name": "support_hashmap",
       "max": 100,
-      "score": 0,
-      "status": "fail",
-      "exitCode": 2
+      "score": 100,
+      "status": "pass",
+      "exitCode": 0
     },
     {
       "name": "sys_map",
@@ -50,9 +50,9 @@
     }
   ],
   "student": "winniebubuandbrown",
-  "runId": "44533450281",
+  "runId": "44537031813",
   "runAttempt": "1",
   "upload": {
-    "status": "accepted"
+    "status": "pending"
   }
 }
