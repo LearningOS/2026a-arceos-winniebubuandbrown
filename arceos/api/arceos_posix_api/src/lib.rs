@@ -13,7 +13,8 @@ extern crate axruntime;
 
 #[cfg(feature = "alloc")]
 extern crate alloc;
-
+#[cfg(feature = "fs")]
+pub use imp::fs::read_file_at;
 #[macro_use]
 mod utils;
 

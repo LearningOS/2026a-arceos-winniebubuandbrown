@@ -31,7 +31,18 @@ impl File {
             .map_err(|_| LinuxError::EINVAL)
     }
 }
-
+/// Read at an offset without changing the file position.
+pub fn read_file_at(fd: c_int, offset: u64, buf: &mut [u8]) -> LinuxResult<usize> {
+    let file = File::from_fd(fd)?;
+    let mut inner = file.inner.lock();
+    let old_pos = inner.seek(SeekFrom::Current(0))?;
+    inner.seek(SeekFrom::Start(offset))?;
+    let result = inner.read(buf);
+    let restore = inner.seek(SeekFrom::Start(old_pos));
+    let count = result?;
+    restore?;
+    Ok(count)
+}
 impl FileLike for File {
     fn read(&self, buf: &mut [u8]) -> LinuxResult<usize> {
         Ok(self.inner.lock().read(buf)?)

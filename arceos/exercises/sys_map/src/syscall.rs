@@ -132,7 +132,7 @@ fn handle_syscall(tf: &TrapFrame, syscall_num: usize) -> isize {
 }
 
 #[allow(unused_variables)]
-fn sys_mmap(
+/*fn sys_mmap(
     addr: *mut usize,
     length: usize,
     prot: i32,
@@ -141,6 +141,68 @@ fn sys_mmap(
     _offset: isize,
 ) -> isize {
     unimplemented!("no sys_mmap!");
+}*/
+fn sys_mmap(
+    addr: *mut usize,
+    length: usize,
+    prot: i32,
+    flags: i32,
+    fd: i32,
+    offset: isize,
+) -> isize {
+    use memory_addr::{MemoryAddr, VirtAddr, VirtAddrRange, PAGE_SIZE_4K};
+
+    syscall_body!(sys_mmap, {
+        if length == 0 || offset < 0 || offset as usize % PAGE_SIZE_4K != 0 {
+            return Err(LinuxError::EINVAL);
+        }
+        let prot = MmapProt::from_bits(prot).ok_or(LinuxError::EINVAL)?;
+        let flags = MmapFlags::from_bits(flags).ok_or(LinuxError::EINVAL)?;
+        if flags.intersects(MmapFlags::MAP_SHARED | MmapFlags::MAP_FIXED) {
+            return Err(LinuxError::ENOSYS);
+        }
+        if !flags.contains(MmapFlags::MAP_PRIVATE) || prot.is_empty() {
+            return Err(LinuxError::EINVAL);
+        }
+        let size = length.checked_add(PAGE_SIZE_4K - 1)
+            .ok_or(LinuxError::ENOMEM)? & !(PAGE_SIZE_4K - 1);
+        let curr = current();
+        let mut uspace = curr.task_ext().aspace.lock();
+        let base = VirtAddr::from(uspace.base().as_usize().max(PAGE_SIZE_4K));
+        if base >= uspace.end() || size > uspace.end() - base {
+            return Err(LinuxError::ENOMEM);
+        }
+        let limit = VirtAddrRange::from_start_size(base, uspace.end() - base);
+        let hint = VirtAddr::from(addr as usize & !(PAGE_SIZE_4K - 1));
+        let start = uspace.find_free_area(hint, size, limit)
+            .or_else(|| uspace.find_free_area(base, size, limit))
+            .ok_or(LinuxError::ENOMEM)?;
+
+        let mut data = alloc::vec::Vec::new();
+        data.try_reserve_exact(size).map_err(|_| LinuxError::ENOMEM)?;
+        data.resize(size, 0u8);
+        if !flags.contains(MmapFlags::MAP_ANONYMOUS) {
+            (offset as u64).checked_add(length as u64)
+                .ok_or(LinuxError::EINVAL)?;
+            let mut done = 0;
+            while done < length {
+                let count = api::read_file_at(
+                    fd, offset as u64 + done as u64, &mut data[done..length],
+                )?;
+                if count == 0 {
+                    break;
+                }
+                done += count;
+            }
+        }
+        let mut permissions = MappingFlags::from(prot);
+        if permissions.contains(MappingFlags::WRITE) {
+            permissions |= MappingFlags::READ;
+        }
+        uspace.map_alloc(start, size, permissions, true)?;
+        uspace.write(start, &data)?;
+        Ok(start.as_usize())
+    })
 }
 
 fn sys_openat(dfd: c_int, fname: *const c_char, flags: c_int, mode: api::ctypes::mode_t) -> isize {
