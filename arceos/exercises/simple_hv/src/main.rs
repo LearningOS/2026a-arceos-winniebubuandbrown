@@ -45,15 +45,25 @@ fn main() {
     let mut ctx = VmCpuRegisters::default();
     prepare_guest_context(&mut ctx);
 
-    // Setup pagetable for 2nd address mapping.
+    /*// Setup pagetable for 2nd address mapping.
     let ept_root = uspace.page_table_root();
     prepare_vm_pgtable(ept_root);
 
     // Kick off vm and wait for it to exit.
     while !run_guest(&mut ctx) {
+    }*/
+    // Setup pagetable for 2nd address mapping.
+    let ept_root = uspace.page_table_root();
+    ax_println!("Preparing guest page table...");
+    prepare_vm_pgtable(ept_root);
+    ax_println!("Guest page table ready");
+
+    // Kick off vm and wait for it to exit.
+    while !run_guest(&mut ctx) {
     }
 
-    panic!("Hypervisor ok!");
+   // panic!("Hypervisor ok!");
+    ax_println!("Hypervisor ok!");
 }
 
 fn prepare_vm_pgtable(ept_root: PhysAddr) {
@@ -101,15 +111,47 @@ fn vmexit_handler(ctx: &mut VmCpuRegisters) -> bool {
                 panic!("bad sbi message! ");
             }
         },
-        Trap::Exception(Exception::IllegalInstruction) => {
+        /*Trap::Exception(Exception::IllegalInstruction) => {
             panic!("Bad instruction: {:#x} sepc: {:#x}",
                 stval::read(),
                 ctx.guest_regs.sepc
             );
+        }*/
+        Trap::Exception(Exception::IllegalInstruction) => {
+            let instruction = stval::read();
+
+            // Emulate: csrr a1, mhartid
+            if instruction == 0xf14025f3 {
+                ctx.guest_regs.gprs.set_reg(A1, 0x1234);
+                ctx.guest_regs.sepc += 4;
+                return false;
+            }
+
+            panic!(
+                "Bad instruction: {:#x} sepc: {:#x}",
+                instruction,
+                ctx.guest_regs.sepc
+            );
         },
-        Trap::Exception(Exception::LoadGuestPageFault) => {
+        /*Trap::Exception(Exception::LoadGuestPageFault) => {
             panic!("LoadGuestPageFault: stval{:#x} sepc: {:#x}",
                 stval::read(),
+                ctx.guest_regs.sepc
+            );
+        }*/
+        Trap::Exception(Exception::LoadGuestPageFault) => {
+            let fault_addr = stval::read();
+
+            // Emulate: ld a0, 64(zero)
+            if fault_addr == 0x40 {
+                ctx.guest_regs.gprs.set_reg(A0, 0x6688);
+                ctx.guest_regs.sepc += 4;
+                return false;
+            }
+
+            panic!(
+                "LoadGuestPageFault: stval {:#x} sepc: {:#x}",
+                fault_addr,
                 ctx.guest_regs.sepc
             );
         },
